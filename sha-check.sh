@@ -2,49 +2,64 @@
 
 ERRATA_ID=$1
 
+# Check if ERRATA_ID is provided as input and is an integer
+if [ $# -ne 1 ] || ! [[ $1 =~ ^[0-9]{6}$ ]]; then
+    echo "Please provide ERRATA_ID as a valid 6-digit integer argument."
+    exit 1
+fi
+
+
 ##main
 
 
 # Extracting nvr's from errata
-errata_payload=$(curl -s --user ':' --negotiate https://errata.devel.redhat.com/api/v1/erratum/$ERRATA_ID/builds.json)
+errata_payload=$(curl -sf --user ':' --negotiate https://errata.devel.redhat.com/api/v1/erratum/$ERRATA_ID/builds.json)
+if [ $? -ne 0 ]; then
+    echo "Error fetching errata payload"
+    exit 1
+fi
+
 nvr=($(echo $errata_payload | jq -r '.["RHEL-8-OSE-Middleware"].builds[][].nvr'))
 
-# Assigning nvr values to variables
-operator_nvr=$(echo "$nvr" | grep -w "operator-container")
-bundle_nvr=$(echo "$nvr" | grep -w "operator-bundle" )
-kafkasql_nvr=$(echo "$nvr" | grep -w "kafkasql" )
-sql_nvr=$(echo "$nvr" | grep -w "sql")
+
+# Getting build info from brew API and Extracting sha value
+for nvr_value in "${nvr[@]}"
+do
+    #operator
+    if [[ $nvr_value == *"operator-container"* ]]; then
+        operator_build_output=$(brew call getBuild $nvr_value --json-output)
+        operator_sha=$(echo "$operator_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
+        echo "The sha value of operator is : $operator_sha "
 
 
-# Getting build info from brew
-operator_build_output=$(brew call getBuild $operator_nvr --json-output)
-sql_build_output=$(brew call getBuild $sql_nvr --json-output)
-kafkasql_build_output=$(brew call getBuild $kafkasql_nvr --json-output)
-bundle_build_output=$(brew call getBuild $bundle_nvr --json-output)
+    #kafkasql
+    elif [[ $nvr_value == *"kafkasql"* ]]; then
+        kafkasql_build_output=$(brew call getBuild $nvr_value --json-output)
+        kafkasql_sha=$(echo "$kafkasql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
+        echo "The sha value of kafkasql is :  $kafkasql_sha "
+
+    
+    #sql
+    elif [[ $nvr_value == *"sql"* ]]; then
+        sql_build_output=$(brew call getBuild $nvr_value --json-output)
+        sql_sha=$(echo "$sql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
+        echo "The sha value of sql is : $sql_sha "
 
 
-#Extracting sha value from the bundle image 
-bundle_kafkasql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[0].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
-echo "The sha value of kafkasql in bundle image  is : $bundle_kafkasql_sha" 
+    #bundle
+    elif [[ $nvr_value == *"operator-bundle"* ]]; then
+        bundle_build_output=$(brew call getBuild $nvr_value --json-output)
 
-bundle_operator_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[1].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
-echo "The sha value of operator in bundle image is : $bundle_operator_sha"
+        bundle_kafkasql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[0].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
+        echo "The sha value of kafkasql in bundle image is : $bundle_kafkasql_sha "
 
-bundle_sql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[2].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
-echo "The sha value of sql in bundle image is : $bundle_sql_sha"
-
-
-# Extracting sha value from kafka-sql image
-kafkasql_sha=$(echo "$kafkasql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
-echo "The sha value of kafkasql is : $kafkasql_sha"
-
-# Extracting sha value from operator image
-operator_sha=$(echo "$operator_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
-echo "The sha value of operator is : $operator_sha"
-
-# Extracting sha value from sql image
-sql_sha=$(echo "$sql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
-echo "The sha value of sql is : $sql_sha"
+        bundle_operator_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[1].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
+        echo "The sha value of operator in bundle image is : $bundle_operator_sha"
+        
+        bundle_sql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[2].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
+        echo "The sha value of sql in bundle image is : $bundle_sql_sha"
+    fi
+done
 
 
 # SHA check
@@ -65,5 +80,8 @@ if [ "$bundle_kafkasql_sha" == "$kafkasql_sha" ]; then
   else
     echo "SHA for SQL image does not match"
   fi
+
+
+
 
 
