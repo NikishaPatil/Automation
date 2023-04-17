@@ -2,6 +2,21 @@
 
 ERRATA_ID=$1
 
+# Check if user has a valid Kerberos ticket
+if ! klist -s; then 
+  # If not, print error message and exit
+  echo "Please have a valid Kerberos ticket, you need to run ' kinit $USER ' and enter your Kerberos password"
+  exit -1 
+fi
+
+
+# Check if rhpkg package is installed
+if ! rpm -q rhpkg > /dev/null ; then 
+  echo "brew package not installed. Please install it with 'sudo dnf install rhpkg'"
+  exit -1 
+fi
+
+
 # Check if ERRATA_ID is provided as input and is an integer
 if [ $# -ne 1 ] || ! [[ $1 =~ ^[0-9]{6}$ ]]; then
     echo "Please provide ERRATA_ID as a valid 6-digit integer argument."
