@@ -68,26 +68,26 @@ else
   for nvr in "${nvr_array[@]}"
   do
     # operator
-    if [[ ! -z "$nvr" && $nvr == *"operator-container"* ]]; then
+    if [[  $nvr == *"operator-container"* ]]; then
       operator_build_output=$(brew call getBuild $nvr --json-output)
       operator_sha=$(echo "$operator_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
       echo "The sha value of operator is: $operator_sha"
 
 
     # kafkasql
-    elif [[ ! -z "$nvr" && $nvr == *"kafkasql"* ]]; then
+    elif [[ $nvr == *"kafkasql"* ]]; then
         kafkasql_build_output=$(brew call getBuild $nvr --json-output)
         kafkasql_sha=$(echo "$kafkasql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
-        echo "The sha value of kafkasql is :  $kafkasql_sha "
+        echo "The sha value of kafkasql is : $kafkasql_sha "
 
     #sql
-    elif [[ ! -z "$nvr" && $nvr == *"sql"* ]]; then
+    elif [[  $nvr == *"sql"* ]]; then
         sql_build_output=$(brew call getBuild $nvr --json-output)
         sql_sha=$(echo "$sql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
         echo "The sha value of sql is : $sql_sha "
 
     #bundle
-    elif [[ ! -z "$nvr" && $nvr == *"operator-bundle"* ]]; then
+    elif [[ $nvr == *"operator-bundle"* ]]; then
         bundle_build_output=$(brew call getBuild $nvr --json-output)
 
         bundle_kafkasql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[0].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
