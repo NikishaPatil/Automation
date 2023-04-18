@@ -33,37 +33,38 @@ if [ $? -ne 0 ]; then
     echo "Error fetching errata payload"
     exit 1
 fi
-
-nvr=($(echo $errata_payload | jq -r '.["RHEL-8-OSE-Middleware"].builds[][].nvr'))
+# Initialize an empty array to store the NVRs
+nvr_array=()
+nvr_array=($(echo $errata_payload | jq -r '.["RHEL-8-OSE-Middleware"].builds[][].nvr'))
 
 
 # Getting build info from brew API and Extracting sha value
-for nvr_value in "${nvr[@]}"
+for nvr in "${nvr_array[@]}"
 do
     #operator
-    if [[ $nvr_value == *"operator-container"* ]]; then
-        operator_build_output=$(brew call getBuild $nvr_value --json-output)
+    if [[ $nvr == *"operator-container"* ]]; then
+        operator_build_output=$(brew call getBuild $nvr --json-output)
         operator_sha=$(echo "$operator_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
         echo "The sha value of operator is : $operator_sha "
 
 
     #kafkasql
-    elif [[ $nvr_value == *"kafkasql"* ]]; then
-        kafkasql_build_output=$(brew call getBuild $nvr_value --json-output)
+    elif [[ $nvr == *"kafkasql"* ]]; then
+        kafkasql_build_output=$(brew call getBuild $nvr --json-output)
         kafkasql_sha=$(echo "$kafkasql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
         echo "The sha value of kafkasql is :  $kafkasql_sha "
 
     
     #sql
-    elif [[ $nvr_value == *"sql"* ]]; then
-        sql_build_output=$(brew call getBuild $nvr_value --json-output)
+    elif [[ $nvr == *"sql"* ]]; then
+        sql_build_output=$(brew call getBuild $nvr --json-output)
         sql_sha=$(echo "$sql_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
         echo "The sha value of sql is : $sql_sha "
 
 
     #bundle
-    elif [[ $nvr_value == *"operator-bundle"* ]]; then
-        bundle_build_output=$(brew call getBuild $nvr_value --json-output)
+    elif [[ $nvr == *"operator-bundle"* ]]; then
+        bundle_build_output=$(brew call getBuild $nvr --json-output)
 
         bundle_kafkasql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[0].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
         echo "The sha value of kafkasql in bundle image is : $bundle_kafkasql_sha "
