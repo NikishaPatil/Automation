@@ -102,27 +102,34 @@ else
     done
 fi
 
-#SHA check
-if [[  " ${nvr_array[@]} " =~ "operator-bundle" ]]; then
-    if [ "$bundle_kafkasql_sha" == "$kafkasql_sha" ]; then
+# SHA check
+if [[ " ${nvr_array[@]} " =~ "operator-bundle" ]]; then
+    if [ -z "$kafkasql_sha" ]; then
+        echo "There was no respin for kafkasql"
+    elif [ "$bundle_kafkasql_sha" == "$kafkasql_sha" ]; then
         echo "SHA for Kafkasql image matches"
     else
         echo "SHA for Kafkasql image does not match"
     fi
 
-    if [ "$bundle_operator_sha" == "$operator_sha" ]; then
-        echo "SHA for Operator image matches"
-    else
-        echo "SHA for Operator image does not match"
-    fi
-
-    if [ "$bundle_sql_sha" == "$sql_sha" ]; then
+   
+    if [ -z "$sql_sha" ]; then
+        echo "There was no respin for sql"
+    elif [ "$bundle_sql_sha" == "$sql_sha" ]; then
         echo "SHA for SQL image matches"
     else
         echo "SHA for SQL image does not match"
     fi
 
+     if [ -z "$operator_sha" ]; then
+        echo "There was no respin for Operator"
+    elif [ "$bundle_operator_sha" == "$operator_sha" ]; then
+        echo "SHA for Operator image matches"
+    else
+        echo "SHA for Operator image does not match"
+    fi
+
 else
-  echo "The nvr of operator-bundle image wasn't found in the errata payload"
+    echo "Error: The nvr of operator-bundle image wasn't found in the errata payload"
 fi
 
