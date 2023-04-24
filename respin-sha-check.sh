@@ -49,8 +49,15 @@ do
 done
 
 # Print the length of the nvr_array and all the elements in separate lines
+echo " "
+echo "******************************"
+
+echo "Fetching nvr values : "
 echo "length=${#nvr_array[@]}"
 printf '%s\n' "${nvr_array[@]}"
+echo " "
+echo "******************************"
+echo " "
 
 
 
@@ -58,6 +65,8 @@ printf '%s\n' "${nvr_array[@]}"
 if [[ ! " ${nvr_array[@]} " =~ "operator-bundle" ]]; then
   echo "There was no respin for the operator bundle image"
 else
+  echo "Retrieving the SHA value from the Brew builds : "
+  echo " "
   # Initialize variables to store SHA values
   bundle_kafkasql_sha=""
   bundle_operator_sha=""
@@ -68,6 +77,7 @@ else
   for nvr in "${nvr_array[@]}"
   do
     # operator
+    
     if [[  $nvr == *"operator-container"* ]]; then
       operator_build_output=$(brew call getBuild $nvr --json-output)
       operator_sha=$(echo "$operator_build_output" | jq -r '.extra.image.index.digests."application/vnd.docker.distribution.manifest.list.v2+json"' | cut -d ":" -f 2)
@@ -88,6 +98,11 @@ else
 
     #bundle
     elif [[ $nvr == *"operator-bundle"* ]]; then
+        echo "  "  
+        echo "******************************" 
+        echo " "
+        echo "Retrieving the SHA values from the brew builds for the operator-bundle image :"
+        echo " "
         bundle_build_output=$(brew call getBuild $nvr --json-output)
 
         bundle_kafkasql_sha=$(echo "$bundle_build_output" | jq -r '.extra.image.operator_manifests.related_images.pullspecs[0].new' |  sed 's/.*:\([a-f0-9]\{64\}\)$/\1/')
@@ -104,6 +119,11 @@ fi
 
 # SHA check
 if [[ " ${nvr_array[@]} " =~ "operator-bundle" ]]; then
+    echo "   "
+    echo "******************************"
+    echo " "
+    echo "Validation to check if SHA matches :"
+    echo " "
     if [ -z "$kafkasql_sha" ]; then
         echo "There was no respin for kafkasql"
     elif [ "$bundle_kafkasql_sha" == "$kafkasql_sha" ]; then
@@ -128,6 +148,9 @@ if [[ " ${nvr_array[@]} " =~ "operator-bundle" ]]; then
     else
         echo "SHA for Operator image does not match"
     fi
+
+    echo " "
+    echo "******************************"
 
 else
     echo "Error: The nvr of operator-bundle image wasn't found in the errata payload"
